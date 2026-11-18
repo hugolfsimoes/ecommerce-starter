@@ -55,8 +55,13 @@ Starter reutilizável para lojas virtuais de clientes freelance.
 
 Conventional Commits: `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`.
 
-## Como trabalhar
+## Fluxo de trabalho (um step por vez)
 
-- Para feature grande (mais de 3 arquivos ou mudança de schema), apresentar o plano antes de implementar.
-- Antes de dar uma tarefa como concluída: rodar `npm run lint` e `npx tsc --noEmit`.
+- O plano macro está em `docs/ROADMAP.md`. Trabalhe em **um único step por vez** e nunca adiante o próximo.
+- Para cada step: escreva o plano detalhado com o superpowers (write-plan), salve em `docs/plans/` e **aguarde minha aprovação** antes de executar.
+- Execute em lotes pequenos e pare para eu revisar entre os lotes.
+- Use brainstorm só quando o step tiver decisão de design em aberto.
+- TDD é obrigatório para regras de negócio (`src/modules/`, adapters, webhooks). Em setup, config e telas sem lógica, testes são opcionais.
+- Ao concluir o step: rode `npm run lint` e `npx tsc --noEmit`, rode o agent `code-reviewer`, marque o step como `[~]` no ROADMAP e me entregue um resumo e uma sugestão de mensagem de commit.
+- **Não faça commits.** Eu reviso o diff, faço o commit e marco o step como `[x]`.
 - Não adicionar dependência nova sem justificar no plano.
