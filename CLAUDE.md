@@ -40,6 +40,20 @@ Starter reutilizável para lojas virtuais de clientes freelance.
 - Status do pedido só muda por transições válidas: PENDING → PAID → SHIPPED → DELIVERED; PENDING/PAID → CANCELED; PAID → REFUNDED.
 - Preço e total são sempre calculados no servidor. Nunca confiar em valor vindo do cliente.
 
+## Constraints no banco
+
+O Prisma não representa `CHECK` no schema: elas vivem só no SQL da migration `init` (e de migrations futuras) e estão comentadas (`// CHECK: ...`) ao lado de cada campo em `prisma/schema.prisma`. Violação = erro do Postgres, então o código deve validar antes (Zod) e tratar o erro como último recurso.
+
+- `ProductVariant`: `priceCents >= 0`, `stock >= 0` (última barreira contra vender acima do estoque; a baixa roda em `prisma.$transaction` e reverte se estourar)
+- `Order`: `subtotalCents`, `shippingCents`, `discountCents`, `totalCents` todos `>= 0`
+- `OrderItem`: `quantity > 0`, `unitPriceCents >= 0`
+- `Coupon`:
+  - `percentOff BETWEEN 1 AND 100`, `amountOffCents > 0`, `minOrderCents >= 0`
+  - no máximo um desconto: `percentOff` e `amountOffCents` não podem estar preenchidos juntos
+  - pelo menos um benefício: `percentOff`, `amountOffCents` ou `freeShipping = true`
+- `Order.number`: sequência (`Order_number_seq`) começa em **1001** (`ALTER SEQUENCE` na migration `init`). Sequências não revertem com rollback: não rodar inserts de teste em `Order` sem restaurar com `ALTER SEQUENCE "Order_number_seq" RESTART WITH 1001`.
+- Ao mudar o schema, `prisma migrate dev` não detecta mudança em CHECK: criar migration com `--create-only` e escrever o `ALTER TABLE` à mão.
+
 ## Padrões de código
 
 - Server Components por padrão; `"use client"` só quando houver interação/estado no browser.
