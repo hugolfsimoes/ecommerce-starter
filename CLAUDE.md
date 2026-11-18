@@ -42,17 +42,25 @@ Starter reutilizável para lojas virtuais de clientes freelance.
 
 ## Constraints no banco
 
-O Prisma não representa `CHECK` no schema: elas vivem só no SQL da migration `init` (e de migrations futuras) e estão comentadas (`// CHECK: ...`) ao lado de cada campo em `prisma/schema.prisma`. Violação = erro do Postgres, então o código deve validar antes (Zod) e tratar o erro como último recurso.
+O Prisma não representa `CHECK` no schema: elas vivem só no SQL das migrations (`init` e `coupon_and_order_checks`, além das futuras) e estão comentadas (`// CHECK: ...`) ao lado de cada campo em `prisma/schema.prisma`. Violação = erro do Postgres, então o código deve validar antes (Zod) e tratar o erro como último recurso.
 
 - `ProductVariant`: `priceCents >= 0`, `stock >= 0` (última barreira contra vender acima do estoque; a baixa roda em `prisma.$transaction` e reverte se estourar)
-- `Order`: `subtotalCents`, `shippingCents`, `discountCents`, `totalCents` todos `>= 0`
+- `Order`: `subtotalCents`, `shippingCents`, `discountCents`, `totalCents` todos `>= 0`; e `totalCents = subtotalCents + shippingCents - discountCents`
 - `OrderItem`: `quantity > 0`, `unitPriceCents >= 0`
 - `Coupon`:
   - `percentOff BETWEEN 1 AND 100`, `amountOffCents > 0`, `minOrderCents >= 0`
   - no máximo um desconto: `percentOff` e `amountOffCents` não podem estar preenchidos juntos
   - pelo menos um benefício: `percentOff`, `amountOffCents` ou `freeShipping = true`
+  - `maxUses > 0` (quando preenchido), `usedCount >= 0` e `usedCount <= maxUses` (quando `maxUses` preenchido): o incremento de uso deve ser atômico e na mesma transação do pedido
 - `Order.number`: sequência (`Order_number_seq`) começa em **1001** (`ALTER SEQUENCE` na migration `init`). Sequências não revertem com rollback: não rodar inserts de teste em `Order` sem restaurar com `ALTER SEQUENCE "Order_number_seq" RESTART WITH 1001`.
+- `Order.number` e testes: um INSERT que viola CHECK ainda consome a sequência. Em testes com rollback, informe `number` explicitamente (ex.: `999999`) para não tocar em `Order_number_seq`.
 - Ao mudar o schema, `prisma migrate dev` não detecta mudança em CHECK: criar migration com `--create-only` e escrever o `ALTER TABLE` à mão.
+
+## Banco: comportamento a conhecer
+
+- `src/lib/db.ts` importa `server-only` (nunca importar em Client Component) e lança `DATABASE_URL is not set` **na avaliação do módulo**. Um `next build` sem `DATABASE_URL` (ex.: CI) quebra em qualquer rota que importe `db`: defina a variável no build ou torne essas rotas dinâmicas.
+- `prisma.config.ts` usa `process.env.DATABASE_URL ?? ""` (não `env()`), para o `postinstall` (`prisma generate`) funcionar sem `.env`. `migrate` e `studio` exigem a URL.
+- Produto/variação que já tem pedido não pode ser apagado (`OrderItem.variant` é `Restrict`): desativar com `active = false`.
 
 ## Padrões de código
 

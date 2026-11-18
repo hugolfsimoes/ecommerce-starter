@@ -91,7 +91,7 @@ model Order {
   subtotalCents   Int // CHECK: >= 0
   shippingCents   Int         @default(0) // CHECK: >= 0
   discountCents   Int         @default(0) // CHECK: >= 0
-  totalCents      Int // CHECK: >= 0
+  totalCents      Int // CHECK: >= 0 and = subtotalCents + shippingCents - discountCents
   shippingMethod  String?
   shippingAddress Json?
   couponCode      String?
@@ -130,8 +130,8 @@ model Coupon {
   amountOffCents Int? // CHECK: > 0; at most one of percentOff / amountOffCents
   freeShipping   Boolean   @default(false) // CHECK: at least one benefit (percentOff, amountOffCents or freeShipping)
   minOrderCents  Int? // CHECK: >= 0
-  maxUses        Int?
-  usedCount      Int       @default(0)
+  maxUses        Int? // CHECK: > 0 when set
+  usedCount      Int       @default(0) // CHECK: >= 0 and <= maxUses when maxUses is set
   expiresAt      DateTime?
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
